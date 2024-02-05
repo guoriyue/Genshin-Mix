@@ -75,43 +75,64 @@ def load_lora_weights(pipeline, checkpoint_path, multiplier, device, dtype):
 from diffusers.models import AutoencoderKL
 from diffusers import StableDiffusionPipeline
 
+characters = json.load(open("lora.json", "r", encoding="utf-8"))
+safetensor_dir = "~/GenshinLora"
+save_dir = "~/GenshinGens"
+negative_prompt = "EasyNegative, disembodied limb, worst quality, normal quality, low quality, low res, blurry, text, watermark, logo, banner, extra digits, cropped, jpeg artifacts, signature, username, error, sketch ,duplicate, ugly, monochrome, horror, geometry, mutation, disgusting, bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, realistic photo, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
+general_positive_prompt="Solo, beautiful, Detailed eyes, natural light, 64k resolution, beautiful, ultra detailed, colorful, rich deep color, 16k, glow effects"
+
+
 # model = "CompVis/stable-diffusion-v1-4"
 vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse")
 # pipe = StableDiffusionPipeline.from_pretrained(model, vae=vae)
 
 pipe = StableDiffusionPipeline.from_single_file(
-    "/Users/guomingfei/Downloads/anything-v4.5-pruned.safetensors", vae=vae)
+    "../anything-v4.5-pruned.safetensors", vae=vae, device=device).to(device)
 pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
-negative_prompt = "EasyNegative, disembodied limb, worst quality, normal quality, low quality, low res, blurry, text, watermark, logo, banner, extra digits, cropped, jpeg artifacts, signature, username, error, sketch ,duplicate, ugly, monochrome, horror, geometry, mutation, disgusting, bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, realistic photo, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
+# negative_prompt = "EasyNegative, disembodied limb, worst quality, normal quality, low quality, low res, blurry, text, watermark, logo, banner, extra digits, cropped, jpeg artifacts, signature, username, error, sketch ,duplicate, ugly, monochrome, horror, geometry, mutation, disgusting, bad anatomy, bad hands, three hands, three legs, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, worst face, three crus, extra crus, fused crus, worst feet, three feet, fused feet, fused thigh, three thigh, fused thigh, extra thigh, worst thigh, missing fingers, extra fingers, ugly fingers, long fingers, horn, realistic photo, extra eyes, huge eyes, 2girl, amputation, disconnected limbs"
+# general_positive_prompt=", Solo, beautiful, Detailed eyes, natural light, 64k resolution, beautiful, ultra detailed, colorful, rich deep color, 16k, glow effects"
+device = "cuda:0"
+comb_number = 1000
+while comb_number:
+    print("generating ", 1000 - comb_number)
+    # for each combination generate 5 images
+    picked_character = random.sample(characters, 2)
 
-new_pipe=pipe
-prompt = "albedo (genshin impact)"
-path="/Users/guomingfei/Downloads/GenshinLora/albedo.safetensors"
-new_pipe = load_lora_weights(new_pipe, path, 1.0, "cpu", torch.float32)
-# path="/Users/guomingfei/Downloads/GenshinLora/barbara.safetensors"
-# prompt+=", barbara (genshin impact)"
-# new_pipe = load_lora_weights(new_pipe, path, 1.0, "cpu", torch.float32)
-prompt+=", yaoyaodef"
-path="/Users/guomingfei/Downloads/GenshinLora/yaoyao.safetensors"
-new_pipe = load_lora_weights(new_pipe, path, 1.0, "cpu", torch.float32)
-# path="/Users/guomingfei/Downloads/genshin-char-model.safetensors"
-# new_pipe = load_lora_weights(new_pipe, path, 1.0, "cpu", torch.float32)
-general_positive_prompt=", Solo, beautiful, Detailed eyes, natural light, 64k resolution, beautiful, ultra detailed, colorful, rich deep color, 16k, glow effects"
-# general_positive_prompt=""
-max_length = new_pipe.tokenizer.model_max_length
-input_ids = new_pipe.tokenizer(prompt+general_positive_prompt, return_tensors="pt").input_ids
-negative_ids = new_pipe.tokenizer(negative_prompt, truncation=True, padding="max_length", max_length=input_ids.shape[-1], return_tensors="pt").input_ids                                                                                                     
+    prompt = ""
+    answer = []
+    for character in picked_character:
+        answer.append(character['name'].lower())
+        prompt += character['prompt'] + ', '
+        lora_model = safetensor_dir+'/'+character['path']
+        print(lora_model)
+    
+        new_pipe = load_lora_weights(new_pipe, lora_model, 1.0, device, torch.float32)
+    
+    max_length = new_pipe.tokenizer.model_max_length
+    input_ids = new_pipe.tokenizer(prompt + ',' + general_positive_prompt, return_tensors="pt").input_ids
+    # input_ids.to(device)
+    negative_ids = new_pipe.tokenizer(negative_prompt, truncation=True, padding="max_length", max_length=input_ids.shape[-1], return_tensors="pt").input_ids                                                                                                     
+    concat_embeds = []
+    neg_embeds = []
+    for i in range(0, input_ids.shape[-1], max_length):
+        concat_embeds.append(new_pipe.text_encoder(input_ids[:,i: i + max_length].to(device))[0])
+        neg_embeds.append(new_pipe.text_encoder(negative_ids[:, i: i + max_length].to(device))[0])
+        
+    prompt_embeds = torch.cat(concat_embeds, dim=1).to(device)
+    negative_prompt_embeds = torch.cat(neg_embeds, dim=1).to(device)
 
-concat_embeds = []
-neg_embeds = []
-for i in range(0, input_ids.shape[-1], max_length):
-    concat_embeds.append(new_pipe.text_encoder(input_ids[:, i: i + max_length])[0])
-    neg_embeds.append(new_pipe.text_encoder(negative_ids[:, i: i + max_length])[0])
-
-prompt_embeds = torch.cat(concat_embeds, dim=1)
-negative_prompt_embeds = torch.cat(neg_embeds, dim=1)
-
-# 3. Forward
-image = new_pipe(prompt_embeds=prompt_embeds, negative_prompt_embeds=negative_prompt_embeds, num_inference_steps=50).images[0]
-image_file_path = "/Users/guomingfei/Downloads/GenshinLora/Mix/" + prompt.replace(' ', '#') + datetime.now().strftime('%Y%m%d_%H%M%S') + ".png"
-image.save(image_file_path)
+    # 3. Forward
+    image = new_pipe(prompt_embeds=prompt_embeds, negative_prompt_embeds=negative_prompt_embeds, num_inference_steps=50).images[0]
+    image_datetime = datetime.now().strftime('%Y%m%d-%H%M%S')
+    image_file_path = save_dir + "/images/" + prompt.replace(' ', '#') + '@' + image_datetime + ".png"
+    image_info_path = save_dir + "/jsons/" + image_datetime + ".json"
+    
+    image.save(image_file_path)
+    
+    image_info = {
+        "image_upload": False,
+        "image_url": None,
+        "image_file_path": image_file_path,
+        "answer": answer
+    }
+    json.dump(image_info, open(image_info_path, "w", encoding="utf-8"))

@@ -1,0 +1,72 @@
+[
+    {
+        "name": "Kamisato Ayaka",
+        "path": "kamisato-ayaka.safetensors",
+        "prompt": "kamisato ayaka (springbloom missive)"
+    },
+    {
+        "name": "Kamisato Ayaka",
+        "path": "kamisato-ayaka.safetensors",
+        "prompt": "kamisato ayaka"
+    },
+    {
+        "name": "Nilou",
+        "path": "nilou.safetensors",
+        "prompt": "nilou (genshin impact)"
+    },
+    {
+        "name": "Sangonomiya Kokomi",
+        "path": "sangonomiya-kokomi.safetensors",
+        "prompt": "sangonomiya kokomi"
+    },
+    {
+        "name": "Fishcl",
+        "path": "fischl.safetensors",
+        "prompt": "fischl (genshin impact)"
+    },
+    {
+        "name": "Keqing",
+        "path": "keqing.safetensors",
+        "prompt": "keqing (genshin impact)"
+    },
+    {
+        "name": "Alhaitham",
+        "path": "alhaitham.safetensors",
+        "prompt": "alhaitham\\(genshin impact\\)"
+    },
+    {
+        "name": "Barbara",
+        "path": "barbara.safetensors",
+        "prompt": "barbara \\(genshin impact\\)"
+    },
+    {
+        "name": "Ningguang",
+        "path": "ningguang.safetensors",
+        "prompt": "ningguang \\(genshin impact\\)"
+    },
+    {
+        "name": "Beidou",
+        "path": "beidou.safetensors",
+        "prompt": "beidou (genshin impact)"
+    },
+    {
+        "name": "Candace",
+        "path": "candace.safetensors",
+        "prompt": "candacedef"
+    },
+    {
+        "name": "Collei",
+        "path": "collei.safetensors",
+        "prompt": "colleirnd"
+    },
+    {
+        "name": "Dehya",
+        "path": "dehya.safetensors",
+        "prompt": "dehya\\(genshin_impact\\)"
+    },
+    {
+        "name": "Yaoyao",
+        "path": "yaoyao.safetensors",
+        "prompt": "yaoyaodef"
+    }
+]
